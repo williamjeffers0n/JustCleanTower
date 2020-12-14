@@ -2,6 +2,7 @@
 const {
   Model
 } = require('sequelize');
+const { Office } = require('../models');
 module.exports = (sequelize, DataTypes) => {
   class Towers extends Model {
     /**
@@ -11,6 +12,9 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      Towers.hasMany(models.Office, {
+        foreignKey: 'towerId'
+      });
     }
   };
   Towers.init({
