@@ -20,16 +20,25 @@ const getAllUsers = async (req, res) => {
     }
 }
 
-const getUserById = async (req, res) => {
+const getUserById = async (id) => {
     try {
-        const { id } = req.params;
         const user = await User.findOne({
-            where: { id: id },
-            include: [
-                {
-                    model: Project
-                }
-            ]
+            where: { id: id }
+        });
+        if (user) {
+            return user;
+        }
+        return 'User with the specified ID does not exists';
+    } catch (error) {
+        return res.status(500).send(error.message);
+    }
+}
+
+const getUserByEmail = async (req, res) => {
+    try {
+        const { email } = req.params;
+        const user = await User.findOne({
+            where: { email: id }
         });
         if (user) {
             return res.status(200).json({ user });

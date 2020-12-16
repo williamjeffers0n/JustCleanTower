@@ -5,11 +5,14 @@ const {
   Op
 } = require('sequelize');
 
+const {
+  socketio
+} = require('../_middleware/socketio');
 const createTower = async (req, res) => {
   try {
     const tower = await Towers.create(req.body);
     return res.status(201).json({
-      tower,
+      tower
     });
   } catch (error) {
     return res.status(500).json({
@@ -22,19 +25,17 @@ const listAllTowers = async (req, res) => {
   try {
     const {
       page,
-      size,
-      title
+      size
     } = req.query;
     const {
       limit,
       offset
     } = getPagination(page, size);
-    var condition = getCondition(title);
-    const towers = await Towers.findAll({
-      where: condition,
+    const condition = getCondition(req);
+    const towers = await Towers.findAll(condition,
       limit,
       offset
-    });
+    );
     const response = getPagingData(towers, page, limit);
     return res.status(200).json({
       towers
@@ -57,7 +58,8 @@ const getAllTowers = async (req, res) => {
     } = getPagination(page, size);
     const towers = await Towers.findAll({
       limit: limit,
-      offset: offset
+      offset: offset,
+      raw: true
     });
     const response = getPagingData(towers, page, limit);
     return res.status(200).json({
@@ -76,10 +78,7 @@ const getTowerById = async (req, res) => {
     const tower = await Towers.findOne({
       where: {
         id: id
-      },
-      include: [{
-        model: Project
-      }]
+      }
     });
     if (tower) {
       return res.status(200).json({
@@ -122,14 +121,18 @@ const deleteTower = async (req, res) => {
   try {
     const {
       id
-    } = req.params;
+    } = req.query;
     const deleted = await Towers.destroy({
       where: {
         id: id
       }
     });
     if (deleted) {
-      return res.status(204).send("Towers deleted");
+      global.io.emit('sendnotification', {message: 'Towers deleted'});
+
+      return res.status(200).json({
+        msg: "Towers deleted"
+      });;
     }
     throw new Error("Towers not found");
   } catch (error) {
@@ -163,16 +166,37 @@ const getPagingData = (data, page, limit) => {
   };
 };
 
-const getCondition = (title) => {
-
-  return {
-    title: {
-      [Op.like]: '%' + title + '%'
-    },
-    description: {
-      [Op.like]: '%' + title + '%'
-    }
+const getCondition = (req) => {
+  let searchFeild = req.query.searchFeild;
+  let searchKeyword = req.query.searchKeyword;
+  let sortOrder = req.query.sortOrder;
+  let sortValue = req.query.sortValue;
+  let showWithOffices = req.query.showWithOffices;
+  var options = {
+    where: {}
   };
+
+  if (searchFeild && searchKeyword) {
+
+    options.where[searchFeild] = {
+      [Op.like]: '%' + searchKeyword + '%'
+    }
+  }
+
+  if (showWithOffices === 'true') {
+    const like = {
+      [Op.gt]: 0
+    };
+    options.where.numberOfOffices = like;
+  }
+  // ASC and 'DESC'
+  if (sortValue && sortOrder) {
+    options.order = [
+      [sortValue, sortOrder]
+    ]
+  }
+
+  return options;
 
 };
 
